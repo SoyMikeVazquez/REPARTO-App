@@ -8,13 +8,25 @@ import 'providers/auth_provider.dart';
 import 'providers/orders_provider.dart';
 import 'providers/route_provider.dart';
 import 'providers/dispatch_provider.dart';
+import 'providers/finances_provider.dart';
 import 'screens/splash/splash_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'env.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializa almacenamiento local persistente
   await StorageService.init();
+
+  // Inicializa Supabase
+  await Supabase.initialize(
+    url: Env.supabaseUrl,
+    // anonKey está deprecado en las nuevas versiones, el correcto es publishableKey
+    // aunque la librería subyacente lo puede seguir aceptando dependiendo de la subversión,
+    // si el linter pide publishableKey (o el propio paquete anonKey), hay que usar anonKey si falla,
+    publishableKey: Env.supabaseAnonKey,
+  );
 
   // Configura barra de estado del sistema transparente
   SystemChrome.setSystemUIOverlayStyle(
@@ -32,6 +44,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => OrdersProvider()),
         ChangeNotifierProvider(create: (_) => RouteProvider()),
         ChangeNotifierProvider(create: (_) => DispatchProvider()),
+        ChangeNotifierProvider(create: (_) => FinancesProvider()),
       ],
       child: const RepartoApp(),
     ),

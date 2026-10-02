@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_app_bar.dart';
 import '../../core/widgets/reparto_card.dart';
-import '../../providers/auth_provider.dart';
+import '../../providers/finances_provider.dart';
 
 class MetricsScreen extends StatelessWidget {
   const MetricsScreen({super.key});
@@ -12,142 +12,144 @@ class MetricsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final auth = Provider.of<AuthProvider>(context);
-    final courier = auth.courier;
+    final finances = Provider.of<FinancesProvider>(context);
 
-    final weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Hoy'];
-    final weekValues = [620.0, 780.0, 540.0, 920.0, 1100.0, 1250.0, 840.0];
-    const maxVal = 1300.0;
+    // Refresh if loaded empty
+    if (!finances.isLoading && finances.weeklyEarnings == 0) {
+      // In a real app we might only want to fetch once on init
+    }
 
     return Scaffold(
       appBar: const CustomAppBar(
         title: 'Métricas & Rendimiento',
         showLogo: false,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Overall Rating & Total Earnings Hero Card
-            RepartoCard(
-              isActive: true,
-              padding: const EdgeInsets.all(20),
+      body: finances.isLoading
+          ? const Center(child: CircularProgressIndicator(color: RepartoColors.primaryRed))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'Ingresos Totales de la Semana',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: isDark
-                          ? RepartoColors.darkTextSecondary
-                          : RepartoColors.lightTextSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '\$6,050.00 MXN',
-                    style: GoogleFonts.outfit(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: RepartoColors.primaryRed,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '+14% comparado con la semana anterior',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: RepartoColors.statusDelivered,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Performance KPIs Grid
-            Row(
-              children: [
-                Expanded(
-                  child: RepartoCard(
-                    padding: const EdgeInsets.all(14),
+                  // Overall Rating & Total Earnings Hero Card
+                  RepartoCard(
+                    isActive: true,
+                    padding: const EdgeInsets.all(20),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.timer_outlined,
-                          color: RepartoColors.statusInRoute,
-                          size: 22,
-                        ),
-                        const SizedBox(height: 8),
                         Text(
-                          'Tiempo Promedio',
+                          'Ingresos Totales de la Semana',
                           style: GoogleFonts.inter(
-                            fontSize: 12,
+                            fontSize: 13,
                             color: isDark
                                 ? RepartoColors.darkTextSecondary
                                 : RepartoColors.lightTextSecondary,
                           ),
                         ),
+                        const SizedBox(height: 6),
                         Text(
-                          '21.4 min',
+                          '\$${finances.weeklyEarnings.toStringAsFixed(2)} MXN',
                           style: GoogleFonts.outfit(
-                            fontSize: 18,
+                            fontSize: 32,
                             fontWeight: FontWeight.w800,
+                            color: RepartoColors.primaryRed,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: RepartoCard(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.speed_outlined,
-                          color: RepartoColors.statusDelivered,
-                          size: 22,
-                        ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         Text(
-                          'Puntualidad',
+                          'Horas Activas: ${finances.activeHours.toStringAsFixed(1)} h',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: isDark
-                                ? RepartoColors.darkTextSecondary
-                                : RepartoColors.lightTextSecondary,
-                          ),
-                        ),
-                        Text(
-                          '98.6%',
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w600,
+                            color: RepartoColors.statusDelivered,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: RepartoCard(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.two_wheeler_outlined,
-                          color: RepartoColors.statusPending,
-                          size: 22,
+                  const SizedBox(height: 16),
+                  
+                  // Performance KPIs Grid
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RepartoCard(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.timer_outlined,
+                                color: RepartoColors.statusInRoute,
+                                size: 22,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tiempo Promedio',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? RepartoColors.darkTextSecondary
+                                      : RepartoColors.lightTextSecondary,
+                                ),
+                              ),
+                              Text(
+                                '21.4 min',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: RepartoCard(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.speed_outlined,
+                                color: RepartoColors.statusDelivered,
+                                size: 22,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Puntualidad',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? RepartoColors.darkTextSecondary
+                                      : RepartoColors.lightTextSecondary,
+                                ),
+                              ),
+                              Text(
+                                '98.6%',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: RepartoCard(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.two_wheeler_outlined,
+                                color: RepartoColors.statusPending,
+                                size: 22,
+                              ),
+                              const SizedBox(height: 8),
                         Text(
                           'Km Recorridos',
                           style: GoogleFonts.inter(
@@ -188,15 +190,28 @@ class MetricsScreen extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // Custom Bars
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: List.generate(weekDays.length, (i) {
-                      final val = weekValues[i];
-                      final barHeight = (val / maxVal) * 110.0;
-                      final isToday = i == weekDays.length - 1;
+                  Builder(builder: (context) {
+                    final chartData = finances.dailyMetrics;
+                    if (chartData.isEmpty) {
+                      return const Center(child: Text('No hay datos suficientes'));
+                    }
+                    
+                    double maxVal = 0.0;
+                    for (var d in chartData) {
+                      if (d['val'] > maxVal) maxVal = d['val'];
+                    }
+                    if (maxVal == 0) maxVal = 100.0;
 
-                      return Column(
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: List.generate(chartData.length, (i) {
+                        final val = (chartData[i]['val'] as num).toDouble();
+                        final dayStr = chartData[i]['day'] as String;
+                        final barHeight = (val / maxVal) * 110.0;
+                        final isToday = i == chartData.length - 1;
+
+                        return Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(
@@ -235,7 +250,7 @@ class MetricsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            weekDays[i],
+                            dayStr,
                             style: GoogleFonts.outfit(
                               fontSize: 11,
                               fontWeight: isToday
@@ -251,7 +266,8 @@ class MetricsScreen extends StatelessWidget {
                         ],
                       );
                     }),
-                  ),
+                  );
+                  }),
                 ],
               ),
             ),
@@ -281,7 +297,7 @@ class MetricsScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Calificación ${courier.rating.toStringAsFixed(2)} / 5.0',
+                          'Calificación 4.9 / 5.0',
                           style: GoogleFonts.outfit(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/courier_model.dart';
 import '../core/services/storage_service.dart';
 import '../core/network/api_service.dart';
@@ -6,17 +7,18 @@ import '../core/network/mock_data.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  bool _isAuthenticated = true; // Por defecto autenticado en sesión demo
-  String _userRole = 'courier'; // 'courier' | 'dispatcher'
-  String _businessSlug = 'reparto-cdmx';
+  bool _isAuthenticated = false;
+  String _userRole = 'cliente'; // 'cliente' | 'repartidor' | 'broker'
+  String _businessSlug = '';
   CourierModel _courier = MockData.initialCourier;
   bool _isLoading = false;
 
   bool get isAuthenticated => _isAuthenticated;
   String get userRole => _userRole;
-  bool get isCourier => _userRole == 'courier';
-  bool get isDispatcher => _userRole == 'dispatcher';
+  bool get isCourier => _userRole == 'repartidor';
+  bool get isClient => _userRole == 'cliente';
   String get businessSlug => _businessSlug;
   CourierModel get courier => _courier;
   bool get isOnline => _courier.isOnline;
@@ -27,6 +29,28 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
+    final session = _supabase.auth.currentSession;
+    _isAuthenticated = session != null;
+    if (session != null) {
+      await _fetchUserProfile(session.user.id);
+    } else {
+      _courierStatus = '';
+    }
+
+    // Escuchar cambios de sesión en Supabase
+    _supabase.auth.onAuthStateChange.listen((data) async {
+      final session = data.session;
+      _isAuthenticated = session != null;
+      if (session != null) {
+        // Fetch user profile to get role
+        await _fetchUserProfile(session.user.id);
+      } else {
+        _courierStatus = '';
+        _userRole = 'cliente';
+      }
+      notifyListeners();
+    });
+
     _userRole = StorageService.getUserRole();
     _businessSlug = StorageService.getBusinessSlug();
     final savedOnline = StorageService.getCourierOnline();
@@ -34,24 +58,75 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login({
-    required String email,
-    required String password,
-    required String role,
-    required String slug,
-  }) async {
+  String _courierStatus = ''; // 'Pendiente', 'Confirmado', etc.
+  String get courierStatus => _courierStatus;
+
+  Future<void> _fetchUserProfile(String userId) async {
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select('role, broker_id')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (response != null) {
+        _userRole = response['role'] ?? 'cliente';
+        await StorageService.saveUserRole(_userRole);
+      }
+
+      // Also check if they exist in repartidores table
+      final repResponse = await _supabase
+          .from('repartidores')
+          .select('status')
+          .eq('id_repartidor', userId)
+          .maybeSingle();
+          
+      if (repResponse != null) {
+        _userRole = 'repartidor'; // Force role if they exist here
+        _courierStatus = repResponse['status'] ?? 'Pendiente';
+        await StorageService.saveUserRole(_userRole);
+      } else {
+        _courierStatus = '';
+      }
+      
+    } catch (e) {
+      debugPrint('Error fetching user profile: $e');
+    }
+  }
+
+  Future<void> signInWithPhone(String phone) async {
     _isLoading = true;
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 600)); // Simula handshake API
+    try {
+      await _supabase.auth.signInWithOtp(
+        phone: phone,
+      );
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
 
-    _isAuthenticated = true;
-    _userRole = role;
-    _businessSlug = slug;
+    _isLoading = false;
+    notifyListeners();
+  }
 
-    await StorageService.saveUserRole(role);
-    await StorageService.saveBusinessSlug(slug);
-    await StorageService.saveAuthToken('token_reparto_${DateTime.now().millisecondsSinceEpoch}');
+  Future<void> verifyOTP(String phone, String token) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _supabase.auth.verifyOTP(
+        phone: phone,
+        token: token,
+        type: OtpType.sms,
+      );
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
 
     _isLoading = false;
     notifyListeners();
@@ -75,7 +150,7 @@ class AuthProvider extends ChangeNotifier {
     await StorageService.saveCourierOnline(nextStatus);
     notifyListeners();
 
-    // Sincroniza telemetría en background con reparto.mx
+    // Sincroniza telemetría en background con Supabase o API
     _apiService.updateCourierLocation(
       isOnline: nextStatus,
       lat: _courier.currentLat,
@@ -84,7 +159,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await _supabase.auth.signOut();
     _isAuthenticated = false;
+    _courierStatus = '';
+    _userRole = 'cliente';
     await StorageService.clearAll();
     notifyListeners();
   }

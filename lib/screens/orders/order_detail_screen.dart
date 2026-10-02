@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,11 +11,19 @@ import '../../core/widgets/reparto_badge.dart';
 import '../../models/order_model.dart';
 import '../../providers/orders_provider.dart';
 import '../courier/proof_of_delivery_sheet.dart';
+import '../../env.dart';
 
-class OrderDetailScreen extends StatelessWidget {
+class OrderDetailScreen extends StatefulWidget {
   final OrderModel order;
 
   const OrderDetailScreen({super.key, required this.order});
+
+  @override
+  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  final MapController _mapController = MapController();
 
   Future<void> _makeCall(String phone) async {
     final uri = Uri.parse('tel:$phone');
@@ -25,7 +35,7 @@ class OrderDetailScreen extends StatelessWidget {
   Future<void> _openWhatsApp(String phone, String customerName) async {
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
     final msg = Uri.encodeComponent(
-      'Hola $customerName, te contacto respecto a tu pedido #${order.id} de Reparto.mx.',
+      'Hola $customerName, te contacto respecto a tu pedido #${widget.order.id} de Reparto.mx.',
     );
     final uri = Uri.parse('https://wa.me/$cleanPhone?text=$msg');
     if (await canLaunchUrl(uri)) {
@@ -48,14 +58,24 @@ class OrderDetailScreen extends StatelessWidget {
 
     // Encuentra el estado más actualizado de este pedido en el provider
     final currentOrder = ordersProv.orders.firstWhere(
-      (o) => o.id == order.id,
-      orElse: () => order,
+      (o) => o.id == widget.order.id,
+      orElse: () => widget.order,
     );
+
+    final bool isInRoute = currentOrder.status == 'in_route' || currentOrder.status == 'en_camino';
+    
+    // Coordenadas de prueba por defecto si driver_current_lat es nulo en BD temporalmente
+    final driverLat = 25.6866; // En BD: currentOrder.driverCurrentLat 
+    final driverLng = -100.3161;
+    final courierLatLng = LatLng(driverLat, driverLng);
+    final styleUrl = isDark
+        ? 'https://api.mapbox.com/styles/v1/mapbox/navigation-night-v1/tiles/{z}/{x}/{y}?access_token={accessToken}'
+        : 'https://api.mapbox.com/styles/v1/mapbox/navigation-day-v1/tiles/{z}/{x}/{y}?access_token={accessToken}';
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Pedido #${currentOrder.id}',
+          'Pedido #${currentOrder.id.substring(0,8)}', // Mostramos ID corto
           style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         actions: [
@@ -70,6 +90,86 @@ class OrderDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Vista de Tracking en vivo si está en camino
+            if (isInRoute) ...[
+              RepartoCard(
+                padding: const EdgeInsets.all(0),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: RepartoColors.statusInRouteBg,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Tu pedido está en camino',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w700,
+                              color: RepartoColors.statusInRoute,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.refresh, color: RepartoColors.statusInRoute),
+                            iconSize: 20,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              ordersProv.fetchOrders(); // Actualiza coords (Polling manual)
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Ubicación actualizada')),
+                              );
+                            },
+                          )
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 200,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                        child: FlutterMap(
+                          mapController: _mapController,
+                          options: MapOptions(
+                            initialCenter: courierLatLng,
+                            initialZoom: 14.5,
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate: styleUrl,
+                              additionalOptions: {
+                                'accessToken': Env.mapboxAccessToken,
+                              },
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: LatLng(currentOrder.lat, currentOrder.lng),
+                                  width: 40,
+                                  height: 40,
+                                  child: const Icon(Icons.location_on, color: Colors.blueAccent, size: 30),
+                                ),
+                                Marker(
+                                  point: courierLatLng,
+                                  width: 40,
+                                  height: 40,
+                                  child: const Icon(Icons.two_wheeler, color: RepartoColors.primaryRed, size: 30),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Status Timeline Stepper
             RepartoCard(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),

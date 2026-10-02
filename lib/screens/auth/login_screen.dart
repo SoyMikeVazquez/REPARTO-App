@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/widgets/reparto_button.dart';
 import '../../core/widgets/reparto_logo.dart';
-import '../../core/widgets/reparto_card.dart';
 import '../../providers/auth_provider.dart';
 import '../main_navigation_screen.dart';
+import 'courier_registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,47 +17,79 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'repartidor@reparto.mx');
-  final _passwordController = TextEditingController(text: '••••••••');
-  final _slugController = TextEditingController(text: 'demo');
-  final _selectedRole = 'courier'; // Repartidor de comidas
-  bool _obscurePassword = true;
+  final _phoneController = TextEditingController(text: '+52');
+  final _otpController = TextEditingController();
+  
+  bool _otpSent = false;
+  bool _isLoading = false;
+  String _errorMessage = '';
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _slugController.dispose();
+    _phoneController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    await auth.login(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-      role: _selectedRole,
-      slug: _slugController.text.trim(),
-    );
+  Future<void> _sendOtp() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-      );
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      await auth.signInWithPhone(_phoneController.text.trim());
+      setState(() {
+        _otpSent = true;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  Future<void> _openWebPlatform() async {
-    final uri = Uri.parse(AppConstants.repartoBaseUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _verifyOtp() async {
+    if (_otpController.text.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      await auth.verifyOTP(
+        _phoneController.text.trim(),
+        _otpController.text.trim(),
+      );
+      
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final auth = Provider.of<AuthProvider>(context);
 
     return Scaffold(
       body: SafeArea(
@@ -76,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Center(child: RepartoLogo(size: 40)),
                     const SizedBox(height: 12),
                     Text(
-                      'Portal Repartidores',
+                      'Portal de Acceso',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
                         fontSize: 26,
@@ -88,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'App exclusiva para repartidores de comida',
+                      'Ingresa tu número de teléfono para continuar',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 14,
@@ -97,233 +127,119 @@ class _LoginScreenState extends State<LoginScreen> {
                             : RepartoColors.lightTextSecondary,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 6),
+                    const SizedBox(height: 32),
+                    
+                    if (_errorMessage.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 20),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? RepartoColors.darkCardElevated
-                              : const Color(0xFFFFF1F2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: RepartoColors.primaryRed.withValues(alpha: 0.25),
-                          ),
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.delivery_dining_rounded,
-                              size: 16,
-                              color: RepartoColors.primaryRed,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Entregas de Comida en Vivo',
-                              style: GoogleFonts.outfit(
+                        child: Text(
+                          _errorMessage,
+                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+
+                    if (!_otpSent) ...[
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: 'Número de Teléfono',
+                          hintText: '+52 555 555 5555',
+                          prefixIcon: Icon(Icons.phone),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty || value.length < 10) {
+                            return 'Ingresa un número válido';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      RepartoButton(
+                        label: 'Enviar Código por SMS',
+                        onPressed: _isLoading ? null : _sendOtp,
+                        isLoading: _isLoading,
+                        width: double.infinity,
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: isDark ? RepartoColors.darkBorder : Colors.grey.shade300)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              '¿Quieres unirte como repartidor?',
+                              style: GoogleFonts.inter(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: RepartoColors.primaryRed,
+                                color: isDark ? RepartoColors.darkTextMuted : RepartoColors.lightTextMuted,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Business Slug Field
-                    Text(
-                      'Slug de Negocio / Tienda',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? RepartoColors.darkTextSecondary
-                            : RepartoColors.lightTextSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _slugController,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.storefront_outlined, size: 20),
-                        suffixText: '.reparto.mx',
-                        suffixStyle: GoogleFonts.inter(
-                          color: RepartoColors.primaryRed,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        hintText: 'tunegocio',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Email Field
-                    Text(
-                      'Correo Electrónico',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? RepartoColors.darkTextSecondary
-                            : RepartoColors.lightTextSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.email_outlined, size: 20),
-                        hintText: 'tu@correo.com',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Password Field
-                    Text(
-                      'Contraseña',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? RepartoColors.darkTextSecondary
-                            : RepartoColors.lightTextSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            size: 20,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                        hintText: '••••••••',
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Login Button
-                    RepartoButton(
-                      label: 'Entrar a la Plataforma',
-                      icon: Icons.login_rounded,
-                      isLoading: auth.isLoading,
-                      onPressed: _handleLogin,
-                      width: double.infinity,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Quick Demo Login Button
-                    RepartoButton(
-                      label: 'Acceso Rápido (Modo Demo)',
-                      icon: Icons.flash_on_rounded,
-                      type: RepartoButtonType.secondary,
-                      onPressed: _handleLogin,
-                      width: double.infinity,
-                    ),
-                    const SizedBox(height: 28),
-
-                    // Divider with web link
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Divider(
-                            color: isDark
-                                ? RepartoColors.darkBorder
-                                : RepartoColors.lightBorder,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            '¿Aún no tienes cuenta?',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: isDark
-                                  ? RepartoColors.darkTextMuted
-                                  : RepartoColors.lightTextMuted,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Divider(
-                            color: isDark
-                                ? RepartoColors.darkBorder
-                                : RepartoColors.lightBorder,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Open Web Platform Button
-                    RepartoCard(
-                      onTap: _openWebPlatform,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: RepartoColors.primaryRedLight,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.language_rounded,
-                              color: RepartoColors.primaryRed,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Registra tu negocio en reparto.mx',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark
-                                        ? RepartoColors.darkTextPrimary
-                                        : RepartoColors.lightTextPrimary,
-                                  ),
-                                ),
-                                Text(
-                                  'Prueba gratis 14 días en la web',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? RepartoColors.darkTextSecondary
-                                        : RepartoColors.lightTextSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color: RepartoColors.primaryRed,
-                          ),
+                          Expanded(child: Divider(color: isDark ? RepartoColors.darkBorder : Colors.grey.shade300)),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      OutlinedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CourierRegistrationScreen(),
+                            ),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: RepartoColors.primaryRed),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(
+                          'Solicitar Registro como Repartidor',
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w600,
+                            color: RepartoColors.primaryRed,
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      TextFormField(
+                        controller: _otpController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(letterSpacing: 8, fontSize: 24, fontWeight: FontWeight.bold),
+                        decoration: const InputDecoration(
+                          labelText: 'Código de 6 dígitos',
+                          hintText: '000000',
+                        ),
+                        maxLength: 6,
+                      ),
+                      const SizedBox(height: 24),
+                      RepartoButton(
+                        label: 'Verificar Código',
+                        onPressed: _isLoading ? null : _verifyOtp,
+                        isLoading: _isLoading,
+                        width: double.infinity,
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _isLoading ? null : () {
+                          setState(() {
+                            _otpSent = false;
+                            _otpController.clear();
+                          });
+                        },
+                        child: const Text('Cambiar número de teléfono'),
+                      ),
+                    ],
                   ],
                 ),
               ),
