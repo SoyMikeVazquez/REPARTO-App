@@ -1,8 +1,9 @@
 import '../../env.dart';
 
 class AppConstants {
-  static const String appName = 'Reparto.mx';
-  static const String appTagline = 'Gestión y Optimización de Entregas';
+  static const String appName = 'Pidelo Seguro';
+  static const String appTagline = 'Entregas Seguras y Confiables';
+  static const String appLogoAsset = 'assets/images/pideloseguro.png';
   static const String appVersion = '1.0.0';
 
   // Reparto.mx Infrastructure & Services

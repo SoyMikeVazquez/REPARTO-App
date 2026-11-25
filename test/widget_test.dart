@@ -10,6 +10,8 @@ import 'package:reparto_app/providers/orders_provider.dart';
 import 'package:reparto_app/providers/route_provider.dart';
 import 'package:reparto_app/providers/dispatch_provider.dart';
 import 'package:reparto_app/screens/main_navigation_screen.dart';
+import 'package:reparto_app/screens/auth/login_screen.dart';
+import 'package:reparto_app/screens/courier/courier_single_screen.dart';
 
 void main() {
   setUp(() async {
@@ -17,7 +19,7 @@ void main() {
     await StorageService.init();
   });
 
-  testWidgets('Reparto Navigation Smoke Test', (WidgetTester tester) async {
+  testWidgets('LoginScreen with Cliente and Repartidor tabs test', (WidgetTester tester) async {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -37,7 +39,43 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.byType(MainNavigationScreen), findsOneWidget);
+    // Debe mostrar la pantalla de Login al no estar autenticado
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.text('Portal de Acceso'), findsOneWidget);
+
+    // Debe contener las pestañas solicitadas para Cliente y Repartidor
+    expect(find.text('Cliente'), findsOneWidget);
+    expect(find.text('Repartidor'), findsOneWidget);
+    expect(find.text('Iniciar Sesión como Repartidor'), findsOneWidget);
+
+    // Cambiar al tab de Cliente
+    await tester.tap(find.text('Cliente'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enviar Código de Acceso'), findsOneWidget);
+  });
+
+  testWidgets('CourierSingleScreen Smoke Test', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => OrdersProvider()),
+          ChangeNotifierProvider(create: (_) => RouteProvider()),
+          ChangeNotifierProvider(create: (_) => DispatchProvider()),
+        ],
+        child: MaterialApp(
+          theme: RepartoTheme.lightTheme,
+          home: const CourierSingleScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(CourierSingleScreen), findsOneWidget);
     expect(find.text('Entrega en Curso'), findsOneWidget);
     expect(find.text('Ruta GPS Mapbox en Vivo'), findsOneWidget);
     expect(find.text('Pedidos del Turno'), findsOneWidget);

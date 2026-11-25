@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FinancesProvider extends ChangeNotifier {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  SupabaseClient? get _supabase {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
 
   bool _isLoading = false;
   double _weeklyEarnings = 0.0;
@@ -23,11 +29,13 @@ class FinancesProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final userId = _supabase.auth.currentUser?.id;
+      final client = _supabase;
+      if (client == null) return;
+      final userId = client.auth.currentUser?.id;
       if (userId == null) return;
 
       // 1. Obtener Ganancias Semanales
-      final finances = await _supabase
+      final finances = await client
           .from('finances')
           .select('driver_earnings, created_at')
           .eq('driver_id', userId)
@@ -39,7 +47,7 @@ class FinancesProvider extends ChangeNotifier {
       }
 
       // 2. Obtener Sesiones para calcular horas activas (Últimos 7 días)
-      final sessions = await _supabase
+      final sessions = await client
           .from('driver_sessions')
           .select('session_start, session_end')
           .eq('driver_id', userId)
@@ -77,9 +85,11 @@ class FinancesProvider extends ChangeNotifier {
   /// Registra el inicio de un turno de trabajo
   Future<void> startSession() async {
     try {
-      final userId = _supabase.auth.currentUser?.id;
+      final client = _supabase;
+      if (client == null) return;
+      final userId = client.auth.currentUser?.id;
       if (userId == null) return;
-      await _supabase.from('driver_sessions').insert({
+      await client.from('driver_sessions').insert({
         'driver_id': userId,
         'session_start': DateTime.now().toIso8601String(),
       });
@@ -91,11 +101,13 @@ class FinancesProvider extends ChangeNotifier {
   /// Finaliza el turno de trabajo
   Future<void> endSession() async {
     try {
-      final userId = _supabase.auth.currentUser?.id;
+      final client = _supabase;
+      if (client == null) return;
+      final userId = client.auth.currentUser?.id;
       if (userId == null) return;
       
       // Buscar la sesión activa (sin session_end)
-      final activeSession = await _supabase
+      final activeSession = await client
           .from('driver_sessions')
           .select('id')
           .eq('driver_id', userId)
@@ -105,7 +117,7 @@ class FinancesProvider extends ChangeNotifier {
           .maybeSingle();
           
       if (activeSession != null) {
-        await _supabase.from('driver_sessions').update({
+        await client.from('driver_sessions').update({
           'session_end': DateTime.now().toIso8601String(),
         }).eq('id', activeSession['id'] as String);
       }

@@ -13,18 +13,24 @@ import 'screens/splash/splash_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'env.dart';
 
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializa almacenamiento local persistente
   await StorageService.init();
 
+  // Inicializa Liquid Glass Widgets (pre-calentamiento de shaders e Impeller)
+  try {
+    await LiquidGlassWidgets.initialize();
+  } catch (e) {
+    debugPrint('LiquidGlassWidgets init fallback: $e');
+  }
+
   // Inicializa Supabase
   await Supabase.initialize(
     url: Env.supabaseUrl,
-    // anonKey está deprecado en las nuevas versiones, el correcto es publishableKey
-    // aunque la librería subyacente lo puede seguir aceptando dependiendo de la subversión,
-    // si el linter pide publishableKey (o el propio paquete anonKey), hay que usar anonKey si falla,
     publishableKey: Env.supabaseAnonKey,
   );
 
@@ -37,29 +43,31 @@ void main() async {
   );
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => OrdersProvider()),
-        ChangeNotifierProvider(create: (_) => RouteProvider()),
-        ChangeNotifierProvider(create: (_) => DispatchProvider()),
-        ChangeNotifierProvider(create: (_) => FinancesProvider()),
-      ],
-      child: const RepartoApp(),
+    LiquidGlassWidgets.wrap(
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => OrdersProvider()),
+          ChangeNotifierProvider(create: (_) => RouteProvider()),
+          ChangeNotifierProvider(create: (_) => DispatchProvider()),
+          ChangeNotifierProvider(create: (_) => FinancesProvider()),
+        ],
+        child: const RepartoApp(),
+      ),
     ),
   );
 }
 
-class RepartoApp extends StatelessWidget {
-  const RepartoApp({super.key});
+class PideloSeguroApp extends StatelessWidget {
+  const PideloSeguroApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'Reparto.mx',
+      title: 'Pidelo Seguro',
       debugShowCheckedModeBanner: false,
       theme: RepartoTheme.lightTheme,
       darkTheme: RepartoTheme.darkTheme,
@@ -68,3 +76,6 @@ class RepartoApp extends StatelessWidget {
     );
   }
 }
+
+/// Alias para mantener compatibilidad
+typedef RepartoApp = PideloSeguroApp;

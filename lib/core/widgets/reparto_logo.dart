@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
+import '../constants/app_constants.dart';
 
-class RepartoLogo extends StatelessWidget {
+class PideloSeguroLogo extends StatelessWidget {
   final double size;
   final bool showText;
   final Color? textColor;
 
-  const RepartoLogo({
+  const PideloSeguroLogo({
     super.key,
     this.size = 32.0,
     this.showText = true,
@@ -21,57 +22,52 @@ class RepartoLogo extends StatelessWidget {
             ? RepartoColors.darkTextPrimary
             : RepartoColors.lightTextPrimary);
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Lightning bolt icon container
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: RepartoColors.primaryRed,
-            borderRadius: BorderRadius.circular(size * 0.28),
-            boxShadow: const [
-              BoxShadow(
-                color: RepartoColors.primaryRedGlow,
-                blurRadius: 12,
-                offset: Offset(0, 4),
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Logo oficial Pidelo Seguro (insignia 3D)
+          SizedBox(
+            width: size,
+            height: size,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(size * 0.22),
+              child: Image.asset(
+                AppConstants.appLogoAsset,
+                fit: BoxFit.contain,
               ),
-            ],
-          ),
-          child: Center(
-            child: Icon(
-              Icons.bolt_rounded,
-              color: Colors.white,
-              size: size * 0.75,
             ),
           ),
-        ),
-        if (showText) ...[
-          SizedBox(width: size * 0.35),
-          RichText(
-            text: TextSpan(
-              style: GoogleFonts.outfit(
-                fontSize: size * 0.72,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-                color: effectiveTextColor,
-              ),
-              children: const [
-                TextSpan(text: 'Reparto'),
-                TextSpan(
-                  text: '.mx',
-                  style: TextStyle(
-                    color: RepartoColors.primaryRed,
-                    fontWeight: FontWeight.w800,
-                  ),
+          if (showText) ...[
+            SizedBox(width: size * 0.28),
+            RichText(
+              text: TextSpan(
+                style: GoogleFonts.outfit(
+                  fontSize: size * 0.62,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: effectiveTextColor,
                 ),
-              ],
+                children: const [
+                  TextSpan(text: 'Pidelo '),
+                  TextSpan(
+                    text: 'Seguro',
+                    style: TextStyle(
+                      color: RepartoColors.primaryRed,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
+
+/// Alias de compatibilidad
+typedef RepartoLogo = PideloSeguroLogo;

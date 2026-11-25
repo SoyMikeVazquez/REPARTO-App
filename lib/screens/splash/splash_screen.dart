@@ -90,24 +90,27 @@ class _SplashScreenState extends State<SplashScreen>
                     return Transform.scale(
                       scale: _scaleAnimation.value,
                       child: Container(
-                        width: 88,
-                        height: 88,
+                        width: 96,
+                        height: 96,
                         decoration: BoxDecoration(
-                          color: RepartoColors.primaryRed,
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: RepartoColors.primaryRedGlow,
+                              color: RepartoColors.primaryRedGlow.withValues(alpha: 0.35),
                               blurRadius: _glowAnimation.value,
                               spreadRadius: 2,
                               offset: const Offset(0, 6),
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.delivery_dining_rounded,
-                          color: Colors.white,
-                          size: 54,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Image.asset(
+                            AppConstants.appLogoAsset,
+                            width: 96,
+                            height: 96,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     );
@@ -123,9 +126,9 @@ class _SplashScreenState extends State<SplashScreen>
                       color: RepartoColors.lightTextPrimary,
                     ),
                     children: const [
-                      TextSpan(text: 'Reparto'),
+                      TextSpan(text: 'Pidelo '),
                       TextSpan(
-                        text: '.mx',
+                        text: 'Seguro',
                         style: TextStyle(
                           color: RepartoColors.primaryRed,
                           fontWeight: FontWeight.w800,
@@ -154,7 +157,7 @@ class _SplashScreenState extends State<SplashScreen>
             right: 0,
             child: Center(
               child: Text(
-                'v${AppConstants.appVersion} • App de Repartidores de Comida',
+                'v${AppConstants.appVersion} • Pidelo Seguro App',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,

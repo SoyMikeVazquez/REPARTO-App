@@ -1,6 +1,6 @@
 {
-    "name": "reparto_app",
-    "short_name": "reparto_app",
+    "name": "Pidelo Seguro",
+    "short_name": "Pidelo Seguro",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

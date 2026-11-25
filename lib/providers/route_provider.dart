@@ -7,15 +7,27 @@ import '../core/services/location_service.dart';
 
 class RouteProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
-  final SupabaseClient _supabase = Supabase.instance.client;
+  SupabaseClient? get _supabase {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
 
-  List<RouteStopModel> _stops = [];
+  List<RouteStopModel> _stops = MockData.mockActiveRouteStops;
   bool _isLoading = false;
   int _activeStopIndex = 1; // 0 is pickup, 1 is next stop
 
   // Simulated GPS courier position (In a real app, use geolocator)
-  double _courierLat = 25.6866;
-  double _courierLng = -100.3161;
+  double _courierLat = 19.4194; // Roma Norte, CDMX
+  double _courierLng = -99.1601;
+
+  void setCourierPosition(double lat, double lng) {
+    _courierLat = lat;
+    _courierLng = lng;
+    notifyListeners();
+  }
 
   List<RouteStopModel> get stops => _stops;
   bool get isLoading => _isLoading;
@@ -80,7 +92,7 @@ class RouteProvider extends ChangeNotifier {
   /// Sincroniza la ubicación a Supabase para que el cliente la pueda consultar (Manual Polling)
   Future<void> syncLocationToDatabase(String orderId) async {
     try {
-      await _supabase.from('orders').update({
+      await _supabase?.from('orders').update({
         'driver_current_lat': _courierLat,
         'driver_current_lng': _courierLng,
       }).eq('id', orderId);

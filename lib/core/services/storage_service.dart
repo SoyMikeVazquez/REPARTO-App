@@ -48,6 +48,22 @@ class StorageService {
     return _prefs?.getBool(AppConstants.keyIsOnline) ?? true;
   }
 
+  static Future<void> saveCourierId(String id) async {
+    await _prefs?.setString(AppConstants.keyCourierId, id);
+  }
+
+  static String? getCourierId() {
+    return _prefs?.getString(AppConstants.keyCourierId);
+  }
+
+  static Future<void> saveClientIdentifier(String identifier) async {
+    await _prefs?.setString('client_identifier', identifier);
+  }
+
+  static String? getClientIdentifier() {
+    return _prefs?.getString('client_identifier');
+  }
+
   static Future<void> clearAll() async {
     await _prefs?.clear();
   }

@@ -1,4 +1,4 @@
-package mx.reparto.reparto_app
+package pideloseguromx.io
 
 import io.flutter.embedding.android.FlutterActivity
 

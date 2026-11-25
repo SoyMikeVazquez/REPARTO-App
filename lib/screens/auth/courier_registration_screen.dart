@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/widgets/reparto_button.dart';
 import '../../core/widgets/reparto_logo.dart';
+import '../../core/widgets/auth_error_dialog.dart';
 import '../../providers/auth_provider.dart';
 import 'login_screen.dart';
 
@@ -46,7 +47,11 @@ class _CourierRegistrationScreenState extends State<CourierRegistrationScreen> {
       await auth.signInWithPhone(_phoneController.text.trim());
       setState(() => _otpSent = true);
     } catch (e) {
-      setState(() => _errorMessage = e.toString());
+      if (mounted) {
+        final info = AuthErrorHelper.parse(e);
+        setState(() => _errorMessage = info.message);
+        AuthErrorHelper.showErrorPopup(context, e);
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -63,7 +68,11 @@ class _CourierRegistrationScreenState extends State<CourierRegistrationScreen> {
       await auth.verifyOTP(_phoneController.text.trim(), _otpController.text.trim());
       setState(() => _otpVerified = true);
     } catch (e) {
-      setState(() => _errorMessage = e.toString());
+      if (mounted) {
+        final info = AuthErrorHelper.parse(e);
+        setState(() => _errorMessage = info.message);
+        AuthErrorHelper.showErrorPopup(context, e);
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -117,7 +126,11 @@ class _CourierRegistrationScreenState extends State<CourierRegistrationScreen> {
         );
       }
     } catch (e) {
-      setState(() => _errorMessage = e.toString());
+      if (mounted) {
+        final info = AuthErrorHelper.parse(e);
+        setState(() => _errorMessage = info.message);
+        AuthErrorHelper.showErrorPopup(context, e);
+      }
     } finally {
       setState(() => _isLoading = false);
     }

@@ -32,6 +32,13 @@ class CourierModel {
   });
 
   CourierModel copyWith({
+    String? id,
+    String? name,
+    String? phone,
+    String? email,
+    String? vehicleType,
+    String? vehiclePlate,
+    double? rating,
     bool? isOnline,
     double? currentLat,
     double? currentLng,
@@ -41,13 +48,13 @@ class CourierModel {
     int? totalDeliveries,
   }) {
     return CourierModel(
-      id: id,
-      name: name,
-      phone: phone,
-      email: email,
-      vehicleType: vehicleType,
-      vehiclePlate: vehiclePlate,
-      rating: rating,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      vehicleType: vehicleType ?? this.vehicleType,
+      vehiclePlate: vehiclePlate ?? this.vehiclePlate,
+      rating: rating ?? this.rating,
       totalDeliveries: totalDeliveries ?? this.totalDeliveries,
       isOnline: isOnline ?? this.isOnline,
       currentLat: currentLat ?? this.currentLat,
@@ -55,6 +62,25 @@ class CourierModel {
       todayEarnings: todayEarnings ?? this.todayEarnings,
       todayTips: todayTips ?? this.todayTips,
       completedToday: completedToday ?? this.completedToday,
+    );
+  }
+
+  factory CourierModel.fromSupabase(Map<String, dynamic> json) {
+    return CourierModel(
+      id: (json['id_repartidor'] ?? json['id'] ?? '').toString(),
+      name: (json['name'] ?? json['nombre'] ?? 'Repartidor').toString(),
+      phone: (json['phone'] ?? json['telefono'] ?? '').toString(),
+      email: (json['email'] ?? json['correo'] ?? '').toString(),
+      vehicleType: (json['vehicleType'] ?? json['tipo_vehiculo'] ?? 'Moto').toString(),
+      vehiclePlate: (json['vehiclePlate'] ?? json['placa'] ?? 'MX-REP-01').toString(),
+      rating: ((json['rating'] ?? 4.9) as num).toDouble(),
+      totalDeliveries: ((json['totalDeliveries'] ?? json['entregas_totales'] ?? 24) as num).toInt(),
+      isOnline: json['isOnline'] == true,
+      currentLat: ((json['lat'] ?? 19.4194) as num).toDouble(),
+      currentLng: ((json['lng'] ?? -99.1601) as num).toDouble(),
+      todayEarnings: ((json['todayEarnings'] ?? 640.0) as num).toDouble(),
+      todayTips: ((json['todayTips'] ?? 85.0) as num).toDouble(),
+      completedToday: ((json['completedToday'] ?? 6) as num).toInt(),
     );
   }
 

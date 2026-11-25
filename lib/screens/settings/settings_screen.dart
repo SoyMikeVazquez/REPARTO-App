@@ -330,7 +330,7 @@ class SettingsScreen extends StatelessWidget {
 
             Center(
               child: Text(
-                'Reparto.mx Extensión Móvil • v${AppConstants.appVersion}',
+                '${AppConstants.appName} • v${AppConstants.appVersion}',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: isDark

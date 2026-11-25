@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import 'courier/courier_main_screen.dart';
+import 'courier/courier_single_screen.dart';
 import 'client/client_dashboard_screen.dart';
 import 'auth/pending_approval_screen.dart';
 import 'auth/login_screen.dart';
@@ -21,7 +21,7 @@ class MainNavigationScreen extends StatelessWidget {
     // Si es repartidor
     if (auth.isCourier) {
       if (auth.courierStatus == 'Confirmado') {
-        return const CourierMainScreen();
+        return const CourierSingleScreen();
       } else {
         return const PendingApprovalScreen();
       }
